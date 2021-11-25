@@ -154,7 +154,6 @@ def main(args):
         tic = time.time()
 
         batch_ref_img_tensor = data['batch_ref_img_tensor']
-        batch_sent_feat = data['batch_sent_feat']
         batch_triad_feat = data['batch_triad_feat']
         batch_action_tensor = data['batch_action_tensor']
         batch_location_tensor = data['batch_location_tensor']
@@ -202,9 +201,16 @@ def main(args):
         if (iter % opt['save_every'] == 0) and (iter > 0) or iter == opt['max_iters']:
         #if (iter % opt['eval_every'] == 0) or iter == opt['max_iters']:
 
-            acc = eval_utils.eval_split(loader, actor, 'testA', opt, normalization)
+            acc = eval_utils.eval_split(loader, actor, 'val', opt, normalization)
+            #acc = eval_utils.eval_split(loader, actor, 'testA', opt, normalization)
             val_accuracies += [(iter, acc)]
+            print('validation acc : %.2f%%\n' % (acc * 100.0))
+
             current_score = acc
+
+            f = open("./result", "a")
+            f.write(str(current_score) + "\n")
+            f.close()
 
             if best_val_score is None or current_score > best_val_score:
                 best_val_score = current_score
