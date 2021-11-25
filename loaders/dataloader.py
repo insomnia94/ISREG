@@ -295,10 +295,6 @@ class DataLoader(Loader):
         dataset = opt["dataset"]
         splitBy = opt["splitBy"]
 
-        # import the language feature of each sentence extracted through BERT
-        sent_feats_path = 'cache/prepro/' + str(dataset) + "_" + str(splitBy) + "/refer_sents_bert.npy"
-        sent_feats = np.load(sent_feats_path)
-
         # import the language feature of each triad
         sent_extract = json.load(open(osp.join('cache/sub_obj_wds', str(dataset) + '_' + str(splitBy), "sent_extract_multi.json")))
 
@@ -345,7 +341,7 @@ class DataLoader(Loader):
             ann_ids = self.Images[img_id]['ann_ids']
             ref_ids = self.Images[img_id]['ref_ids']
 
-            # generate the filename, W, H and the original anns, refs of this image
+            # generate the firef_idslename, W, H and the original anns, refs of this image
             img_W = self.Images[img_id]['width']
             img_H = self.Images[img_id]['height']
             img_filename = str(self.Images[img_id]['file_name'])
@@ -364,7 +360,7 @@ class DataLoader(Loader):
             sent_id = sent_ids[random.randint(0, len(sent_ids) - 1)]
             sent_tokens = self.Sentences[sent_id]['tokens']
             #print(sent_tokens)
-            sent_feat = sent_feats[sent_id]
+            #sent_feat = sent_feats[sent_id]
 
 
             # first triad
@@ -549,12 +545,10 @@ class DataLoader(Loader):
             batch_action.append(action_list)
             batch_location.append(location)
             batch_history_actions.append(history_actions)
-            batch_sent_feat.append(sent_feat)
             batch_sent_tokens.append(sent_tokens)
             batch_triad_feat.append(triad_feat_np)
 
         batch_ref_img_tensor = torch.Tensor(batch_ref_img).cuda()
-        batch_sent_feat = torch.Tensor(batch_sent_feat).cuda()
         batch_triad_feat = torch.Tensor(batch_triad_feat).cuda()
         batch_action_tensor = torch.FloatTensor(np.array(batch_action)).cuda()
         batch_location_tensor = torch.FloatTensor(np.array(batch_location)).cuda()
@@ -565,7 +559,6 @@ class DataLoader(Loader):
         data = {}
 
         data['batch_ref_img_tensor'] = batch_ref_img_tensor
-        data['batch_sent_feat'] = batch_sent_feat
         data['batch_triad_feat'] = batch_triad_feat
         data['batch_action_tensor'] = batch_action_tensor
         data['batch_location_tensor'] = batch_location_tensor
@@ -587,26 +580,8 @@ class DataLoader(Loader):
         dataset = opt["dataset"]
         splitBy = opt["splitBy"]
 
-        # import the language feature of each triad
-        sent_extract = json.load(
-            open(osp.join('cache/sub_obj_wds', str(dataset) + '_' + str(splitBy), "sent_extract_multi.json")))
-
-        sent_sub_wordid = sent_extract["sent_sub_wordid"]
-        sent_sub_classwordid = sent_extract["sent_sub_classwordid"]
-        sent_obj_wordid = sent_extract["sent_obj_wordid"]
-        sent_rel_wordid = sent_extract["sent_rel_wordid"]
-
-        # import the language feature of each word (word2vec)
-        embedmat_path = 'cache/word_embedding/embed_matrix.npy'
-        embedding_mat = np.load(embedmat_path)
-
-        # import the vocabulary
-        vocab_file = 'cache/word_embedding/vocabulary_72700.txt'
-        f = open(vocab_file, "r")
-        vocab_list = f.read().splitlines()
-        f.close()
-
-
+        sent_feats_path = 'cache/prepro/' + str(dataset) + "_" + str(splitBy) + "/refer_sents_bert.npy"
+        sent_feats = np.load(sent_feats_path)
 
         # iterator using global parameter self.iterator
         ri = self.iterators[split]
@@ -635,58 +610,7 @@ class DataLoader(Loader):
         sent_id = sent_ids[random.randint(0, len(sent_ids) - 1)]
         sent_tokens = self.Sentences[sent_id]['tokens']
         #print(sent_tokens)
-        #sent_feat = sent_feats[sent_id]
-
-        # first triad
-        sub_classwordid = sent_sub_classwordid[str(sent_id)][0]
-        obj_wordid = sent_obj_wordid[str(sent_id)][0]
-        rel_wordid = sent_rel_wordid[str(sent_id)][0]
-
-        sub_classword = vocab_list[sub_classwordid]
-        obj_word = vocab_list[obj_wordid]
-        rel_word = vocab_list[rel_wordid]
-
-        sub_classword_feat_np = embedding_mat[sub_classwordid]
-        obj_word_feat_np = embedding_mat[obj_wordid]
-        rel_word_feat_np = embedding_mat[rel_wordid]
-
-        # second triad
-        if len(sent_sub_classwordid[str(sent_id)]) > 1:
-            sub_classwordid_2 = sent_sub_classwordid[str(sent_id)][1]
-            obj_wordid_2 = sent_obj_wordid[str(sent_id)][1]
-            rel_wordid_2 = sent_rel_wordid[str(sent_id)][1]
-
-            sub_classword_2 = vocab_list[sub_classwordid_2]
-            obj_word_2 = vocab_list[obj_wordid_2]
-            rel_word_2 = vocab_list[rel_wordid_2]
-
-            sub_classword_feat_np_2 = embedding_mat[sub_classwordid_2]
-            obj_word_feat_np_2 = embedding_mat[obj_wordid_2]
-            rel_word_feat_np_2 = embedding_mat[rel_wordid_2]
-        else:
-
-            sub_classwordid_2 = sub_classwordid
-            obj_wordid_2 = obj_wordid
-            rel_wordid_2 = rel_wordid
-
-            sub_classword_2 = sub_classword
-            obj_word_2 = obj_word
-            rel_word_2 = rel_word
-
-            sub_classword_feat_np_2 = sub_classword_feat_np
-            obj_word_feat_np_2 = obj_word_feat_np
-            rel_word_feat_np_2 = rel_word_feat_np
-
-        # triad_feat_np = np.concatenate((sub_classword_feat_np,obj_word_feat_np,rel_word_feat_np), axis=0)
-        triad_feat_np = np.concatenate((sub_classword_feat_np, obj_word_feat_np, rel_word_feat_np,
-                                        sub_classword_feat_np_2, obj_word_feat_np_2, rel_word_feat_np_2), axis=0)
-
-        # triad = sub_classword + " " + rel_word + " " + obj_word
-        triad = sub_classword + " " + rel_word + " " + obj_word + ", " + sub_classword_2 + " " + rel_word_2 + " " + obj_word_2
-
-
-
-
+        sent_feat = sent_feats[sent_id]
 
         gd_box = ref['box']
         box_x0 = int(gd_box[0])
@@ -702,8 +626,7 @@ class DataLoader(Loader):
         data['img_path'] = img_path
         data['img_W'] = img_W
         data['img_H'] = img_H
-        data['triad_feat'] = triad_feat_np
-        data['triad_raw'] = triad
+        data['sent_feat'] = sent_feat
         data['gd_box'] = gd_box
         data['bounds'] = {'it_pos_now': self.iterators[split], 'it_max': max_index, 'wrapped': wrapped}
 
@@ -790,7 +713,7 @@ class DataLoader(Loader):
         ref_ids = self.Images[image_id]['ref_ids']
 
         sent_ids = []
-        img_sent_feats = []
+        #img_sent_feats = []
         img_triad_feats = []
         sent_raws = []
         sent_triads = []
@@ -802,6 +725,7 @@ class DataLoader(Loader):
             ref = self.Refs[ref_id]
             for sent_id in ref['sent_ids']:
                 sent_ids += [sent_id]
+                #img_sent_feats += [sent_feats[sent_id]]
                 sent_token_list = self.Sentences[sent_id]['tokens']
                 sent_raw = ""
                 for token in sent_token_list:
